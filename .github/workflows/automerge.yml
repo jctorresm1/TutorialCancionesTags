@@ -17,8 +17,7 @@ jobs:
           run: |
            echo "::set-output name=branch_name::${{ github.ref_name}}-merge"
   merge-branch:
-    name: Checkout & Merge
-    needs: [temp-branch]
+    name: Merge & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout de repositorio
@@ -27,19 +26,13 @@ jobs:
         id: crear-rama
         if: ${{ contains(github.event.head_commit.message, 'FEATURE') }}
         run: |
-          git checkout -b ${{ steps.temp-branch.outputs.branch_name }}
-          git push -f -u origin ${{ steps.temp-branch.outputs.branch_name }}
+          git checkout "${{ github.ref_name}}"         
       - name: Mezcla develop -> feature
         uses: tukasz/direct-merge-action@master
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           source-branch: develop
-          target-branch: ${{ steps.temp-branch.outputs.branch_name }}
-  dependecies_test:
-    name: Dependencias & Test
-    needs: [merge-branch]
-    runs-on: ubuntu-latest
-    steps:
+          target-branch: "${{ github.ref_name}}"
       - name: Configuración de entorno de python
         uses: actions/setup-python@v2
         with:
@@ -58,7 +51,7 @@ jobs:
           coverage report -m       
   merge_develop:
     name: Mezclar a develop
-    needs: [dependecies_test]
+    needs: [merge-branch]
     runs-on: ubuntu-latest
     steps:
       - name: Mezcla feature -> develop
