@@ -7,8 +7,18 @@ permissions:
   contents: write
   pull-requests: write
 jobs:
+  temp-branch:
+    name: Extraer nombre de rama temporal
+    runs-on: ubuntu-latest
+    steps:      
+        - name: Revisar palabra clave y crear rama
+          id: crear-rama
+          if: ${{ contains(github.event.head_commit.message, 'FEATURE') }}
+          run: |
+           echo "::set-output name=branch_name::${{ github.ref_name}}-merge"
   merge-branch:
     name: Checkout & Merge
+    needs: [temp-branch]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout de repositorio
@@ -17,14 +27,14 @@ jobs:
         id: crear-rama
         if: ${{ contains(github.event.head_commit.message, 'FEATURE') }}
         run: |
-          git checkout -b ${{ github.ref_name}}
-          git push -f -u origin ${{ github.ref_name}}
+          git checkout -b ${{ steps.temp-branch.outputs.branch_name }}
+          git push -f -u origin ${{ steps.temp-branch.outputs.branch_name }}
       - name: Mezcla develop -> feature
         uses: tukasz/direct-merge-action@master
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           source-branch: develop
-          target-branch: ${{ github.ref_name }}
+          target-branch: ${{ steps.temp-branch.outputs.branch_name }}
   dependecies_test:
     name: Dependencias & Test
     needs: [merge-branch]
